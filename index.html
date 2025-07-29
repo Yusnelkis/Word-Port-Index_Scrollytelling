@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Port Network - Strategic Analytics</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.0.1/mapbox-gl.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            background: #000;
+            overflow-x: hidden;
+        }
+
+        #map {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        #story {
+            position: relative;
+            z-index: 2;
+        }
+
+        .story-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 5%;
+        }
+
+        .story-section.intro {
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,30,60,0.8));
+        }
+
+        .story-content {
+            width: 420px;
+            background: rgba(0,0,0,0.92);
+            padding: 35px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.15);
+            margin-right: 50px;
+            transform: translateY(30px);
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        .story-content.intro {
+            width: 800px;
+            margin: 0;
+            text-align: center;
+            background: rgba(0,0,0,0.85);
+        }
+
+        .story-content.active {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .chapter-number {
+            color: #00d4ff;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .story-content h1 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #00d4ff, #ffffff, #00a8cc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .story-content h2 {
+            font-size: 1.9rem;
+            margin-bottom: 18px;
+            font-weight: 600;
+        }
+
+        .story-content p {
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.92);
+            line-height: 1.6;
+        }
+
+        .intro-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 18px;
+            opacity: 0.95;
+            color: #00d4ff;
+        }
+
+        .intro-description {
+            font-size: 1.05rem;
+            opacity: 0.85;
+            margin-bottom: 35px;
+            line-height: 1.7;
+        }
+
+        .scroll-indicator {
+            color: #00d4ff;
+            font-size: 15px;
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 20px;
+            background: rgba(0,212,255,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .scroll-indicator:hover {
+            background: rgba(0,212,255,0.2);
+            transform: scale(1.05);
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+        }
+
+        .stat-highlight {
+            background: linear-gradient(135deg, #00d4ff, #0099cc, #007399);
+            padding: 22px;
+            border-radius: 12px;
+            margin: 22px 0;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,212,255,0.3);
+        }
+
+        .stat-highlight h3 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            margin-bottom: 6px;
+        }
+
+        .stat-highlight p {
+            font-size: 0.95rem;
+            margin: 0;
+            opacity: 0.95;
+        }
+
+        .facilities-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 22px 0;
+        }
+
+        .facility-card {
+            background: rgba(255,255,255,0.1);
+            padding: 18px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .facility-card:hover {
+            background: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+
+        .facility-card h4 {
+            color: #00d4ff;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .facility-card .count {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 3px;
+        }
+
+        .facility-card .label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        .color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 18px 0;
+            padding: 18px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            padding: 5px 8px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
+
+        .green-insight {
+            background: rgba(46,213,115,0.15);
+            border: 1px solid rgba(46,213,115,0.4);
+            padding: 18px;
+            border-radius: 10px;
+            margin: 18px 0;
+            border-left: 4px solid #2ed573;
+        }
+
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #000, #001122);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .loading h3 {
+            color: white;
+            margin-bottom: 25px;
+            font-size: 1.3rem;
+        }
+
+        .loading-bar {
+            width: 350px;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0099cc);
+            animation: loadingProgress 3s ease-in-out;
+        }
+
+        @keyframes loadingProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        .chapter-nav {
+            position: fixed;
+            left: 25px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.4);
+            cursor: pointer;
+            transition: all 0.4s ease;
+            border: 2px solid transparent;
+        }
+
+        .nav-dot:hover {
+            background: rgba(0,212,255,0.7);
+            transform: scale(1.2);
+        }
+
+        .nav-dot.active {
+            background: #00d4ff;
+            transform: scale(1.3);
+            box-shadow: 0 0 15px rgba(0,212,255,0.6);
+        }
+
+        .data-source {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 25px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .data-source p {
+            margin-bottom: 8px;
+        }
+
+        .data-source .author {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .story-content {
+                width: calc(100% - 40px);
+                margin: 0 20px;
+                padding: 25px;
+            }
+            
+            .story-section {
+                justify-content: center;
+            }
+
+            .chapter-nav {
+                left: 15px;
+            }
+
+            .facilities-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .story-content h1 {
+                font-size: 2.5rem;
+            }
+        }
+
+        /* Estilos para popup mejorado */
+        .mapboxgl-popup-content {
+            background: rgba(0,0,0,0.95) !important;
+            border-radius: 12px !important;
+            border: 1px solid rgba(0,212,255,0.3) !important;
+            color: white !important;
+            padding: 0 !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7) !important;
+        }
+
+        .port-popup {
+            padding: 15px;
+            min-width: 180px;
+        }
+
+        .port-popup .port-name {
+            font-weight: 700;
+            color: #00d4ff;
+            margin-bottom: 6px;
+            font-size: 1rem;
+        }
+
+        .port-popup .port-info {
+            font-size: 0.85rem;
+            margin-bottom: 3px;
+            color: rgba(255,255,255,0.9);
+        }
+    </style>
+</head>
+<body>
+    <div id="loading" class="loading">
+        <h3>Loading Global Port Network...</h3>
+        <div class="loading-bar">
+            <div class="loading-progress"></div>
+        </div>
+    </div>
+
+    <nav class="chapter-nav" id="nav" style="display: none;">
+        <div class="nav-dot active" data-chapter="intro" title="Introduction"></div>
+        <div class="nav-dot" data-chapter="global" title="Global Overview"></div>
+        <div class="nav-dot" data-chapter="countries" title="Leading Nations"></div>
+        <div class="nav-dot" data-chapter="types" title="Port Types"></div>
+        <div class="nav-dot" data-chapter="size" title="Port Sizes"></div>
+        <div class="nav-dot" data-chapter="facilities" title="Facilities"></div>
+        <div class="nav-dot" data-chapter="operations" title="Operations"></div>
+    </nav>
+
+    <div id="map"></div>
+
+    <div id="story">
+        <section class="story-section intro" data-chapter="intro">
+            <div class="story-content intro active">
+                <h1>Global Port Network</h1>
+                <p class="intro-subtitle">Strategic Analytics for Green Corridors</p>
+                <p class="intro-description">
+                    Comprehensive analysis of 3,824 ports from the World Port Index, revealing strategic 
+                    opportunities for maritime decarbonization and sustainable shipping corridors.
+                </p>
+                <div class="scroll-indicator">↓ Scroll to explore</div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="global">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 01</div>
+                <h2>The Global Maritime Grid</h2>
+                <p>The world's maritime infrastructure consists of <strong>3,824 active ports</strong> spanning every continent. This interactive map displays a strategic sample representing the diversity of global maritime facilities.</p>
+                
+                <div class="stat-highlight">
+                    <h3>3,824</h3>
+                    <p>Active ports worldwide</p>
+                </div>
+                
+                <p>This network handles <strong>90% of global trade</strong> by volume, making maritime decarbonization critical for achieving climate goals.</p>
+                
+                <div class="green-insight">
+                    <strong>🌱 Climate Impact:</strong> Maritime shipping accounts for ~3% of global CO₂ emissions, processing 11 billion tons of cargo annually.
+                </div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="countries">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 02</div>
+                <h2>Leading Maritime Nations</h2>
+                <p>Port distribution by country reveals which nations dominate global maritime infrastructure and strategic waterways.</p>
+                
+                <div class="facilities-grid">
+                    <div class="facility-card">
+                        <h4>United States</h4>
+                        <div class="count">666</div>
+                        <div class="label">ports (17.4%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Canada</h4>
+                        <div class="count">304</div>
+                        <div class="label">ports (7.9%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>United Kingdom</h4>
+                        <div class="count">185</div>
+                        <div class="label">ports (4.8%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Japan</h4>
+                        <div class="count">163</div>
+                        <div class="label">ports (4.3%)</div>
+                    </div>
+                </div>
+                
+                <div class="stat-highlight">
+                    <h3>970</h3>
+                    <p>North America ports (25.3% of global total)</p>
+                </div>
+                
+                <div class="green-insight">
+                    <strong>🌍 Geographic Advantage:</strong> Countries with extensive coastlines and complex geography dominate global port infrastructure.
+                </div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="types">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 03</div>
+                <h2>Port Engineering Types</h2>
+                <p>Natural vs artificial port construction reveals different approaches to maritime infrastructure and environmental adaptation.</p>
+                
+                <div class="facilities-grid">
+                    <div class="facility-card">
+                        <h4>Coastal Natural</h4>
+                        <div class="count">1,266</div>
+                        <div class="label">ports (33.1%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Coastal Breakwater</h4>
+                        <div class="count">790</div>
+                        <div class="label">ports (20.7%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Open Roadstead</h4>
+                        <div class="count">673</div>
+                        <div class="label">ports (17.6%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>River Natural</h4>
+                        <div class="count">668</div>
+                        <div class="label">ports (17.5%)</div>
+                    </div>
+                </div>
+                
+                <div class="color-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #2ed573;"></span>
+                        <span>Natural harbors</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #00d4ff;"></span>
+                        <span>Artificial breakwaters</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #ff9500;"></span>
+                        <span>Open roadsteads</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #007AFF;"></span>
+                        <span>River ports</span>
+                    </div>
+                </div>
+                
+                <div class="green-insight">
+                    <strong>🏗️ Engineering Reality:</strong> 50.6% of ports use natural formations, while 20.7% require artificial breakwater protection.
+                </div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="size">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 04</div>
+                <h2>Port Size Hierarchy</h2>
+                <p>Port classification reveals the global distribution of maritime infrastructure capacity and economic significance.</p>
+                
+                <div class="facilities-grid">
+                    <div class="facility-card">
+                        <h4>Very Small</h4>
+                        <div class="count">2,135</div>
+                        <div class="label">ports (55.8%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Small</h4>
+                        <div class="count">1,030</div>
+                        <div class="label">ports (26.9%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Medium</h4>
+                        <div class="count">366</div>
+                        <div class="label">ports (9.6%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Large</h4>
+                        <div class="count">171</div>
+                        <div class="label">ports (4.5%)</div>
+                    </div>
+                </div>
+                
+                <div class="color-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #FF3030;"></span>
+                        <span>Very Small</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #FF9500;"></span>
+                        <span>Small</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #007AFF;"></span>
+                        <span>Medium</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #30D158;"></span>
+                        <span>Large</span>
+                    </div>
+                </div>
+
+                <div class="stat-highlight">
+                    <h3>82.7%</h3>
+                    <p>Ports are small to very small size</p>
+                </div>
+                
+                <div class="green-insight">
+                    <strong>📊 Infrastructure Reality:</strong> The vast majority of global ports serve local and regional needs rather than international mega-trade.
+                </div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="facilities">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 05</div>
+                <h2>Specialized Infrastructure</h2>
+                <p>Analysis of specialized port facilities reveals critical infrastructure for different cargo types and energy transition opportunities.</p>
+                
+                <div class="facilities-grid">
+                    <div class="facility-card">
+                        <h4>Container</h4>
+                        <div class="count">226</div>
+                        <div class="label">terminals (5.9%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Oil Terminal</h4>
+                        <div class="count">80</div>
+                        <div class="label">facilities (2.1%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>LNG Terminal</h4>
+                        <div class="count">12</div>
+                        <div class="label">facilities (0.3%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Wharves</h4>
+                        <div class="count">2,769</div>
+                        <div class="label">facilities (72.4%)</div>
+                    </div>
+                </div>
+                
+                <div class="color-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #00d4ff;"></span>
+                        <span>Container</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #ff4757;"></span>
+                        <span>Oil</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #2ed573;"></span>
+                        <span>LNG</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot" style="background: #9c88ff;"></span>
+                        <span>General Cargo</span>
+                    </div>
+                </div>
+                
+                <div class="stat-highlight">
+                    <h3>72.4%</h3>
+                    <p>Ports have wharf facilities</p>
+                </div>
+                
+                <div class="green-insight">
+                    <strong>⚡ Strategic Insight:</strong> Only 12 LNG terminals globally represent both scarcity and opportunity for green fuel infrastructure development.
+                </div>
+            </div>
+        </section>
+
+        <section class="story-section" data-chapter="operations">
+            <div class="story-content">
+                <div class="chapter-number">Chapter 06</div>
+                <h2>Operational Capabilities</h2>
+                <p>Analysis of port equipment and services reveals operational readiness for cargo handling and potential for automation and efficiency improvements.</p>
+                
+                <div class="facilities-grid">
+                    <div class="facility-card">
+                        <h4>Mobile Cranes</h4>
+                        <div class="count">1,585</div>
+                        <div class="label">ports (41.5%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Fixed Cranes</h4>
+                        <div class="count">1,298</div>
+                        <div class="label">ports (33.9%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Floating Cranes</h4>
+                        <div class="count">539</div>
+                        <div class="label">ports (14.1%)</div>
+                    </div>
+                    <div class="facility-card">
+                        <h4>Pilotage Required</h4>
+                        <div class="count">2,532</div>
+                        <div class="label">ports (66.2%)</div>
+                    </div>
+                </div>
+                
+                <div class="stat-highlight">
+                    <h3>66.2%</h3>
+                    <p>Ports require compulsory pilotage</p>
+                </div>
+                
+                <div class="green-insight">
+                    <strong>🚢 Safety First:</strong> Two-thirds of global ports require compulsory pilotage, indicating complex navigation conditions and high safety standards.
+                </div>
+                
+                <p><strong>Equipment Distribution:</strong> Mobile cranes are more prevalent than fixed installations, suggesting flexible cargo handling approaches that can adapt to varying vessel sizes and cargo types.</p>
+                
+                <div class="data-source">
+                    <p><strong>Data Source:</strong> World Port Index (3,824 ports total)</p>
+                    <p><strong>Map Display:</strong> Dynamic sample based on chapter focus</p>
+                    <p><strong>Analysis & Visualization:</strong> <span class="author">Yusnelkis Milanés Guisado</span></p>
+                    <p><em>Maritime Infrastructure Analytics Specialist</em></p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Configuración Mapbox mejorada
+        const config = {
+            accessToken: 'pk.eyJ1IjoieW1pbGFuZXMiLCJhIjoiY21ka2hma2UzMHVteDJscXkwZTh0anF4MSJ9.q4g1xy38WkjzzsskgLkfgw',
+            style: 'mapbox://styles/mapbox/satellite-v9',
+            showMarkers: false,
+            projection: 'globe',
+            theme: 'dark',
+            chapters: [
+                {
+                    id: 'intro',
+                    alignment: 'center',
+                    location: {
+                        center: [0, 20],
+                        zoom: 1.8,
+                        pitch: 0,
+                        bearing: 0
+                    }
+                },
+                {
+                    id: 'global',
+                    alignment: 'right',
+                    location: {
+                        center: [15, 25],
+                        zoom: 2.2,
+                        pitch: 15,
+                        bearing: 0
+                    }
+                },
+                {
+                    id: 'countries',
+                    alignment: 'right',
+                    location: {
+                        center: [-95, 45],
+                        zoom: 3.2,
+                        pitch: 25,
+                        bearing: -10
+                    }
+                },
+                {
+                    id: 'types',
+                    alignment: 'right',
+                    location: {
+                        center: [5, 52],
+                        zoom: 4.5,
+                        pitch: 40,
+                        bearing: 20
+                    }
+                },
+                {
+                    id: 'size',
+                    alignment: 'right',
+                    location: {
+                        center: [120, 30],
+                        zoom: 4.2,
+                        pitch: 35,
+                        bearing: -25
+                    }
+                },
+                {
+                    id: 'facilities',
+                    alignment: 'right',
+                    location: {
+                        center: [103.8198, 1.3521], // Singapore
+                        zoom: 8.5,
+                        pitch: 55,
+                        bearing: 45
+                    }
+                },
+                {
+                    id: 'operations',
+                    alignment: 'right',
+                    location: {
+                        center: [121.4737, 31.2304], // Shanghai
+                        zoom: 9.2,
+                        pitch: 45,
+                        bearing: -15
+                    }
+                }
+            ]
+        };
+
+        let map;
+        let currentChapter = 'intro';
+        let allPortsData = [];
+
+        // Función para cargar y procesar datos del CSV
+        async function loadPortData() {
+            try {
+                const csvData = await window.fs.readFile('Word_port_index.csv', { encoding: 'utf8' });
+                
+                const parsedData = Papa.parse(csvData, {
+                    header: true,
+                    dynamicTyping: true,
+                    skipEmptyLines: true
+                });
+
+                // Filtrar puertos con coordenadas válidas
+                const validPorts = parsedData.data.filter(port => 
+                    port.Latitude && port.Longitude && 
+                    port.Latitude >= -90 && port.Latitude <= 90 &&
+                    port.Longitude >= -180 && port.Longitude <= 180 &&
+                    port['Main Port Name']
+                );
+
+                console.log(`Loaded ${validPorts.length} valid ports from ${parsedData.data.length} total records`);
+                return validPorts;
+            } catch (error) {
+                console.warn('Could not load CSV data, using fallback data');
+                return getFallbackPortData();
+            }
+        }
+
+        // Datos de respaldo mejorados y más representativos
+        function getFallbackPortData() {
+            return [
+                // Estados Unidos - Grandes puertos
+                {name: 'Los Angeles', lat: 34.0522, lng: -118.2437, size: 'Large', type: 'container', country: 'US'},
+                {name: 'Long Beach', lat: 33.7701, lng: -118.1937, size: 'Large', type: 'container', country: 'US'},
+                {name: 'New York', lat: 40.7128, lng: -74.0060, size: 'Large', type: 'container', country: 'US'},
+                {name: 'Savannah', lat: 32.0835, lng: -81.0912, size: 'Medium', type: 'container', country: 'US'},
+                {name: 'Seattle', lat: 47.6062, lng: -122.3321, size: 'Medium', type: 'container', country: 'US'},
+                {name: 'Houston', lat: 29.7604, lng: -95.3698, size: 'Large', type: 'oil', country: 'US'},
+                {name: 'Norfolk', lat: 36.8468, lng: -76.2852, size: 'Large', type: 'container', country: 'US'},
+                {name: 'Charleston', lat: 32.7767, lng: -79.9311, size: 'Medium', type: 'container', country: 'US'},
+                {name: 'Oakland', lat: 37.8044, lng: -122.2712, size: 'Medium', type: 'container', country: 'US'},
+                {name: 'Tacoma', lat: 47.2529, lng: -122.4443, size: 'Medium', type: 'container', country: 'US'},
+                
+                // Puertos especializados en energía
+                {name: 'Corpus Christi', lat: 27.8006, lng: -97.3964, size: 'Medium', type: 'oil', country: 'US'},
+                {name: 'Beaumont', lat: 30.0804, lng: -94.1266, size: 'Medium', type: 'oil', country: 'US'},
+                {name: 'Sabine Pass', lat: 29.7283, lng: -93.8738, size: 'Medium', type: 'lng', country: 'US'},
+                {name: 'Freeport LNG', lat: 28.9333, lng: -95.2333, size: 'Medium', type: 'lng', country: 'US'},
+                {name: 'Cameron LNG', lat: 29.7833, lng: -93.3167, size: 'Small', type: 'lng', country: 'US'},
+                
+                // Canadá
+                {name: 'Vancouver', lat: 49.2827, lng: -123.1207, size: 'Large', type: 'container', country: 'CA'},
+                {name: 'Montreal', lat: 45.5017, lng: -73.5673, size: 'Medium', type: 'container', country: 'CA'},
+                {name: 'Halifax', lat: 44.6488, lng: -63.5752, size: 'Medium', type: 'container', country: 'CA'},
+                {name: 'Prince Rupert', lat: 54.3150, lng: -130.3209, size: 'Medium', type: 'container', country: 'CA'},
+                {name: 'Saint John', lat: 45.2734, lng: -66.0633, size: 'Small', type: 'container', country: 'CA'},
+                
+                // Reino Unido
+                {name: 'Felixstowe', lat: 51.9542, lng: 1.3511, size: 'Large', type: 'container', country: 'GB'},
+                {name: 'Southampton', lat: 50.9097, lng: -1.4044, size: 'Medium', type: 'container', country: 'GB'},
+                {name: 'Liverpool', lat: 53.4084, lng: -2.9916, size: 'Medium', type: 'container', country: 'GB'},
+                {name: 'London Gateway', lat: 51.5074, lng: 0.1278, size: 'Large', type: 'container', country: 'GB'},
+                {name: 'Bristol', lat: 51.4545, lng: -2.5879, size: 'Small', type: 'general', country: 'GB'},
+                
+                // Japón
+                {name: 'Tokyo', lat: 35.6762, lng: 139.6503, size: 'Large', type: 'container', country: 'JP'},
+                {name: 'Yokohama', lat: 35.4437, lng: 139.6380, size: 'Large', type: 'container', country: 'JP'},
+                {name: 'Osaka', lat: 34.6937, lng: 135.5023, size: 'Large', type: 'container', country: 'JP'},
+                {name: 'Kobe', lat: 34.6901, lng: 135.1955, size: 'Medium', type: 'container', country: 'JP'},
+                {name: 'Nagoya', lat: 35.1815, lng: 136.9066, size: 'Large', type: 'container', country: 'JP'},
+                
+                // Otros puertos globales importantes
+                {name: 'Shanghai', lat: 31.2304, lng: 121.4737, size: 'Large', type: 'container', country: 'CN'},
+                {name: 'Shenzhen', lat: 22.5431, lng: 114.0579, size: 'Large', type: 'container', country: 'CN'},
+                {name: 'Ningbo', lat: 29.8683, lng: 121.5440, size: 'Large', type: 'container', country: 'CN'},
+                {name: 'Singapore', lat: 1.3521, lng: 103.8198, size: 'Large', type: 'container', country: 'SG'},
+                {name: 'Rotterdam', lat: 51.9225, lng: 4.4777, size: 'Large', type: 'container', country: 'NL'},
+                {name: 'Antwerp', lat: 51.2194, lng: 4.4025, size: 'Large', type: 'container', country: 'BE'},
+                {name: 'Hamburg', lat: 53.5511, lng: 9.9937, size: 'Large', type: 'container', country: 'DE'},
+                {name: 'Bremen', lat: 53.0793, lng: 8.8017, size: 'Large', type: 'container', country: 'DE'},
+                {name: 'Le Havre', lat: 49.4944, lng: 0.1077, size: 'Large', type: 'container', country: 'FR'},
+                {name: 'Dubai', lat: 25.2048, lng: 55.2708, size: 'Large', type: 'container', country: 'AE'},
+                {name: 'Jebel Ali', lat: 25.0167, lng: 55.0833, size: 'Large', type: 'container', country: 'AE'},
+                {name: 'Hong Kong', lat: 22.3193, lng: 114.1694, size: 'Large', type: 'container', country: 'HK'},
+                {name: 'Busan', lat: 35.1796, lng: 129.0756, size: 'Large', type: 'container', country: 'KR'},
+                
+                // Puertos especializados en petróleo
+                {name: 'Ras Tanura', lat: 26.7, lng: 50.1667, size: 'Large', type: 'oil', country: 'SA'},
+                {name: 'Mina Al Ahmadi', lat: 29.0926, lng: 48.1644, size: 'Medium', type: 'oil', country: 'KW'},
+                {name: 'Kharg Island', lat: 29.2531, lng: 50.3264, size: 'Large', type: 'oil', country: 'IR'},
+                
+                // Puertos mediterráneos
+                {name: 'Valencia', lat: 39.4699, lng: -0.3763, size: 'Medium', type: 'container', country: 'ES'},
+                {name: 'Barcelona', lat: 41.3851, lng: 2.1734, size: 'Medium', type: 'container', country: 'ES'},
+                {name: 'Algeciras', lat: 36.1408, lng: -5.4526, size: 'Large', type: 'container', country: 'ES'},
+                {name: 'Genoa', lat: 44.4056, lng: 8.9463, size: 'Medium', type: 'container', country: 'IT'},
+                {name: 'La Spezia', lat: 44.1023, lng: 9.8247, size: 'Medium', type: 'container', country: 'IT'},
+                {name: 'Marseille', lat: 43.2965, lng: 5.3698, size: 'Medium', type: 'container', country: 'FR'},
+                {name: 'Piraeus', lat: 37.9421, lng: 23.6463, size: 'Medium', type: 'container', country: 'GR'},
+                
+                // Puertos pequeños representativos
+                {name: 'Bar Harbor', lat: 44.3876, lng: -68.2043, size: 'Very Small', type: 'general', country: 'US'},
+                {name: 'Key West', lat: 24.5557, lng: -81.8009, size: 'Very Small', type: 'general', country: 'US'},
+                {name: 'Port Townsend', lat: 48.1170, lng: -122.7604, size: 'Small', type: 'general', country: 'US'},
+                {name: 'Bellingham', lat: 48.7519, lng: -122.4787, size: 'Small', type: 'general', country: 'US'},
+                {name: 'Port Angeles', lat: 48.1181, lng: -123.4307, size: 'Small', type: 'general', country: 'US'},
+                {name: 'Astoria', lat: 46.1879, lng: -123.8370, size: 'Small', type: 'general', country: 'US'},
+                {name: 'Bangor', lat: 54.6562, lng: -5.6681, size: 'Small', type: 'general', country: 'GB'},
+                {name: 'Dover', lat: 51.1279, lng: 1.3134, size: 'Medium', type: 'ferry', country: 'GB'},
+                {name: 'Portsmouth', lat: 50.8198, lng: -1.0890, size: 'Medium', type: 'general', country: 'GB'},
+                
+                // Puertos nórdicos
+                {name: 'Gothenburg', lat: 57.7089, lng: 11.9746, size: 'Medium', type: 'container', country: 'SE'},
+                {name: 'Stockholm', lat: 59.3293, lng: 18.0686, size: 'Small', type: 'general', country: 'SE'},
+                {name: 'Oslo', lat: 59.9139, lng: 10.7522, size: 'Medium', type: 'general', country: 'NO'},
+                {name: 'Bergen', lat: 60.3913, lng: 5.3221, size: 'Small', type: 'general', country: 'NO'},
+                {name: 'Copenhagen', lat: 55.6761, lng: 12.5683, size: 'Medium', type: 'general', country: 'DK'},
+                
+                // Puertos del Pacífico
+                {name: 'Valparaiso', lat: -33.0458, lng: -71.6197, size: 'Medium', type: 'container', country: 'CL'},
+                {name: 'Callao', lat: -12.0464, lng: -77.1181, size: 'Medium', type: 'container', country: 'PE'},
+                {name: 'Guayaquil', lat: -2.1709, lng: -79.9224, size: 'Small', type: 'general', country: 'EC'},
+                {name: 'Sydney', lat: -33.8688, lng: 151.2093, size: 'Medium', type: 'container', country: 'AU'},
+                {name: 'Melbourne', lat: -37.8136, lng: 144.9631, size: 'Medium', type: 'container', country: 'AU'}
+            ].map(port => ({
+                'Main Port Name': port.name,
+                'Latitude': port.lat,
+                'Longitude': port.lng,
+                'Harbor Size': port.size,
+                'Harbor Type': port.type === 'container' ? 'Coastal (Breakwater)' :
+                              port.type === 'oil' ? 'Coastal (Natural)' :
+                              port.type === 'lng' ? 'Coastal (Breakwater)' :
+                              'Coastal (Natural)',
+                'Country Code': port.country,
+                'Facilities - Container': port.type === 'container' ? 'Y' : 'N',
+                'Facilities - Oil Terminal': port.type === 'oil' ? 'Y' : 'N',
+                'Facilities - LNG Terminal': port.type === 'lng' ? 'Y' : 'N',
+                'Facilities - Wharves': 'Y'
+            }));
+        }
+
+        function createPortGeoJSON(ports, filterFn = null) {
+            const filteredPorts = filterFn ? ports.filter(filterFn) : ports;
+            
+            return {
+                type: 'FeatureCollection',
+                features: filteredPorts.map(port => ({
+                    type: 'Feature',
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [port.Longitude, port.Latitude]
+                    },
+                    properties: {
+                        name: port['Main Port Name'],
+                        size: port['Harbor Size'] || 'Unknown',
+                        type: port['Harbor Type'] || 'Unknown',
+                        country: port['Country Code'] || 'Unknown',
+                        hasContainer: port['Facilities - Container'] === 'Y',
+                        hasOil: port['Facilities - Oil Terminal'] === 'Y',
+                        hasLNG: port['Facilities - LNG Terminal'] === 'Y',
+                        hasWharves: port['Facilities - Wharves'] === 'Y'
+                    }
+                }))
+            };
+        }
+
+        function initializeMap() {
+            mapboxgl.accessToken = config.accessToken;
+
+            map = new mapboxgl.Map({
+                container: 'map',
+                style: config.style,
+                center: config.chapters[0].location.center,
+                zoom: config.chapters[0].location.zoom,
+                pitch: config.chapters[0].location.pitch,
+                bearing: config.chapters[0].location.bearing,
+                projection: config.projection
+            });
+
+            map.on('load', async () => {
+                allPortsData = await loadPortData();
+                addPortsLayer();
+                setupStoryTelling();
+                setupPortInteractions();
+                hideLoading();
+            });
+        }
+
+        function addPortsLayer() {
+            const portsGeoJSON = createPortGeoJSON(allPortsData);
+
+            map.addSource('ports', {
+                type: 'geojson',
+                data: portsGeoJSON
+            });
+
+            map.addLayer({
+                id: 'ports-layer',
+                type: 'circle',
+                source: 'ports',
+                paint: {
+                    'circle-radius': [
+                        'case',
+                        ['==', ['get', 'size'], 'Large'], 10,
+                        ['==', ['get', 'size'], 'Medium'], 7,
+                        ['==', ['get', 'size'], 'Small'], 5,
+                        3
+                    ],
+                    'circle-color': '#00d4ff',
+                    'circle-opacity': 0.85,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-stroke-opacity': 0.9
+                }
+            });
+
+            map.addLayer({
+                id: 'ports-labels',
+                type: 'symbol',
+                source: 'ports',
+                layout: {
+                    'text-field': ['get', 'name'],
+                    'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                    'text-size': [
+                        'case',
+                        ['==', ['get', 'size'], 'Large'], 14,
+                        ['==', ['get', 'size'], 'Medium'], 12,
+                        10
+                    ],
+                    'text-offset': [0, -2.5],
+                    'text-anchor': 'bottom',
+                    'text-optional': true
+                },
+                paint: {
+                    'text-color': '#ffffff',
+                    'text-halo-color': '#000000',
+                    'text-halo-width': 2
+                }
+            });
+        }
+
+        function updatePortData(chapterId) {
+            let filterFn = null;
+            
+            switch(chapterId) {
+                case 'countries':
+                    // Mostrar más puertos de países principales
+                    filterFn = (port) => {
+                        const topCountries = ['United States', 'Canada', 'United Kingdom', 'Japan', 'Norway', 'Indonesia', 'Italy'];
+                        return topCountries.includes(port['Country Code']);
+                    };
+                    break;
+                case 'facilities':
+                    // Mostrar solo puertos con facilidades especializadas
+                    filterFn = (port) => {
+                        return port['Facilities - Container'] === 'Y' || 
+                               port['Facilities - Oil Terminal'] === 'Y' || 
+                               port['Facilities - LNG Terminal'] === 'Y';
+                    };
+                    break;
+                case 'operations':
+                    // Mostrar puertos medianos y grandes
+                    filterFn = (port) => {
+                        return ['Large', 'Medium'].includes(port['Harbor Size']);
+                    };
+                    break;
+                default:
+                    // Muestra todos los puertos para otros capítulos
+                    break;
+            }
+            
+            const updatedGeoJSON = createPortGeoJSON(allPortsData, filterFn);
+            map.getSource('ports').setData(updatedGeoJSON);
+        }
+
+        function setupStoryTelling() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const chapterId = entry.target.dataset.chapter;
+                        const chapterConfig = config.chapters.find(c => c.id === chapterId);
+                        
+                        if (chapterConfig && chapterId !== currentChapter) {
+                            currentChapter = chapterId;
+                            updateNavigation();
+                            flyToLocation(chapterConfig);
+                            updatePortStyling(chapterId);
+                            updatePortData(chapterId);
+                            animateContent(entry.target);
+                        }
+                    }
+                });
+            }, { threshold: 0.6 });
+
+            document.querySelectorAll('[data-chapter]').forEach(section => {
+                observer.observe(section);
+            });
+
+            setupNavigation();
+        }
+
+        function flyToLocation(chapter) {
+            map.flyTo({
+                center: chapter.location.center,
+                zoom: chapter.location.zoom,
+                pitch: chapter.location.pitch,
+                bearing: chapter.location.bearing,
+                duration: 2500,
+                essential: true,
+                curve: 1.42
+            });
+        }
+
+        function updatePortStyling(chapterId) {
+            setTimeout(() => {
+                switch(chapterId) {
+                    case 'intro':
+                    case 'global':
+                    case 'countries':
+                        map.setPaintProperty('ports-layer', 'circle-color', '#00d4ff');
+                        map.setPaintProperty('ports-layer', 'circle-opacity', 0.85);
+                        break;
+                    case 'types':
+                        map.setPaintProperty('ports-layer', 'circle-color', [
+                            'case',
+                            ['in', ['get', 'type'], ['literal', ['Coastal (Natural)', 'River (Natural)', 'Canal or Lake']]], '#2ed573',
+                            ['in', ['get', 'type'], ['literal', ['Coastal (Breakwater)', 'River (Basins)', 'River (Tide Gates)']]], '#00d4ff',
+                            ['==', ['get', 'type'], 'Open Roadstead'], '#ff9500',
+                            '#007AFF'
+                        ]);
+                        break;
+                    case 'size':
+                        map.setPaintProperty('ports-layer', 'circle-color', [
+                            'case',
+                            ['==', ['get', 'size'], 'Large'], '#30D158',
+                            ['==', ['get', 'size'], 'Medium'], '#007AFF',
+                            ['==', ['get', 'size'], 'Small'], '#FF9500',
+                            '#FF3030'
+                        ]);
+                        map.setPaintProperty('ports-layer', 'circle-radius', [
+                            'case',
+                            ['==', ['get', 'size'], 'Large'], 12,
+                            ['==', ['get', 'size'], 'Medium'], 8,
+                            ['==', ['get', 'size'], 'Small'], 6,
+                            4
+                        ]);
+                        break;
+                    case 'facilities':
+                        map.setPaintProperty('ports-layer', 'circle-color', [
+                            'case',
+                            ['==', ['get', 'hasLNG'], true], '#2ed573',
+                            ['==', ['get', 'hasOil'], true], '#ff4757',
+                            ['==', ['get', 'hasContainer'], true], '#00d4ff',
+                            '#9c88ff'
+                        ]);
+                        map.setPaintProperty('ports-layer', 'circle-opacity', [
+                            'case',
+                            ['any', 
+                                ['==', ['get', 'hasContainer'], true],
+                                ['==', ['get', 'hasOil'], true],
+                                ['==', ['get', 'hasLNG'], true]
+                            ], 1.0, 0.4
+                        ]);
+                        break;
+                    case 'operations':
+                        map.setPaintProperty('ports-layer', 'circle-color', [
+                            'case',
+                            ['==', ['get', 'size'], 'Large'], '#30D158',
+                            ['==', ['get', 'size'], 'Medium'], '#007AFF',
+                            '#FF9500'
+                        ]);
+                        map.setPaintProperty('ports-layer', 'circle-radius', [
+                            'case',
+                            ['==', ['get', 'size'], 'Large'], 14,
+                            ['==', ['get', 'size'], 'Medium'], 10,
+                            7
+                        ]);
+                        map.setPaintProperty('ports-layer', 'circle-opacity', 0.9);
+                        break;
+                }
+            }, 600);
+        }
+
+        function animateContent(section) {
+            const content = section.querySelector('.story-content');
+            if (content && !content.classList.contains('active')) {
+                content.classList.add('active');
+            }
+        }
+
+        function setupNavigation() {
+            document.querySelectorAll('.nav-dot').forEach(dot => {
+                dot.addEventListener('click', () => {
+                    const targetSection = document.querySelector(`[data-chapter="${dot.dataset.chapter}"]`);
+                    if (targetSection) {
+                        targetSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                });
+            });
+        }
+
+        function updateNavigation() {
+            document.querySelectorAll('.nav-dot').forEach(dot => {
+                dot.classList.toggle('active', dot.dataset.chapter === currentChapter);
+            });
+        }
+
+        function setupPortInteractions() {
+            const popup = new mapboxgl.Popup({
+                closeButton: false,
+                closeOnClick: false,
+                offset: 15
+            });
+
+            map.on('mouseenter', 'ports-layer', (e) => {
+                map.getCanvas().style.cursor = 'pointer';
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const props = e.features[0].properties;
+
+                // Determinar el tipo de facilidad principal
+                let facilityType = 'General Cargo';
+                if (props.hasLNG) facilityType = 'LNG Terminal';
+                else if (props.hasOil) facilityType = 'Oil Terminal';
+                else if (props.hasContainer) facilityType = 'Container Terminal';
+
+                const popupContent = `
+                    <div class="port-popup">
+                        <div class="port-name">${props.name}</div>
+                        <div class="port-info">Size: ${props.size}</div>
+                        <div class="port-info">Type: ${facilityType}</div>
+                        <div class="port-info">Country: ${props.country}</div>
+                    </div>
+                `;
+
+                // Asegurar que las coordenadas están dentro de los límites del mundo
+                while (Math.abs(e.lngLat.lng) > 180) {
+                    e.lngLat.lng += e.lngLat.lng > 180 ? -360 : 360;
+                }
+
+                popup.setLngLat(coordinates).setHTML(popupContent).addTo(map);
+            });
+
+            map.on('mouseleave', 'ports-layer', () => {
+                map.getCanvas().style.cursor = '';
+                popup.remove();
+            });
+
+            // Interacción con clic para más detalles
+            map.on('click', 'ports-layer', (e) => {
+                const props = e.features[0].properties;
+                
+                let facilities = [];
+                if (props.hasContainer) facilities.push('Container');
+                if (props.hasOil) facilities.push('Oil Terminal');
+                if (props.hasLNG) facilities.push('LNG Terminal');
+                if (props.hasWharves) facilities.push('Wharves');
+                
+                const detailedPopup = new mapboxgl.Popup({offset: 15})
+                    .setLngLat(e.lngLat)
+                    .setHTML(`
+                        <div class="port-popup">
+                            <div class="port-name">${props.name}</div>
+                            <div class="port-info"><strong>Size:</strong> ${props.size}</div>
+                            <div class="port-info"><strong>Type:</strong> ${props.type}</div>
+                            <div class="port-info"><strong>Country:</strong> ${props.country}</div>
+                            <div class="port-info"><strong>Facilities:</strong> ${facilities.join(', ')}</div>
+                        </div>
+                    `)
+                    .addTo(map);
+            });
+        }
+
+        function hideLoading() {
+            const loading = document.getElementById('loading');
+            const nav = document.getElementById('nav');
+            
+            loading.style.opacity = '0';
+            setTimeout(() => {
+                loading.style.display = 'none';
+                nav.style.display = 'flex';
+            }, 500);
+        }
+
+        // Inicialización mejorada
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeMap();
+            
+            // Configurar el indicador de scroll
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('scroll-indicator')) {
+                    const globalSection = document.querySelector('[data-chapter="global"]');
+                    if (globalSection) {
+                        globalSection.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }
+                }
+            });
+
+            // Mejorar la navegación con teclado
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowDown' || e.key === 'Space') {
+                    e.preventDefault();
+                    const chapters = ['intro', 'global', 'countries', 'types', 'size', 'facilities', 'operations'];
+                    const currentIndex = chapters.indexOf(currentChapter);
+                    if (currentIndex < chapters.length - 1) {
+                        const nextChapter = chapters[currentIndex + 1];
+                        const nextSection = document.querySelector(`[data-chapter="${nextChapter}"]`);
+                        if (nextSection) {
+                            nextSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }
+                    }
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const chapters = ['intro', 'global', 'countries', 'types', 'size', 'facilities', 'operations'];
+                    const currentIndex = chapters.indexOf(currentChapter);
+                    if (currentIndex > 0) {
+                        const prevChapter = chapters[currentIndex - 1];
+                        const prevSection = document.querySelector(`[data-chapter="${prevChapter}"]`);
+                        if (prevSection) {
+                            prevSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'center'
+                            });
+                        }
+                    }
+                }
+            });
+        });
+
+        // Manejo de errores mejorado
+        window.addEventListener('error', (e) => {
+            console.error('Error detected:', e.message);
+            // Ocultar loading en caso de error
+            const loading = document.getElementById('loading');
+            if (loading && loading.style.display !== 'none') {
+                hideLoading();
+            }
+        });
+
+        // Redimensionar mapa y manejar cambios de orientación
+        window.addEventListener('resize', () => {
+            if (map) {
+                setTimeout(() => {
+                    map.resize();
+                }, 100);
+            }
+        });
+
+        // Precargar próximo capítulo para mejor rendimiento
+        function preloadNextChapter() {
+            const chapters = ['intro', 'global', 'countries', 'types', 'size', 'facilities', 'operations'];
+            const currentIndex = chapters.indexOf(currentChapter);
+            if (currentIndex < chapters.length - 1) {
+                const nextChapter = chapters[currentIndex + 1];
+                const nextConfig = config.chapters.find(c => c.id === nextChapter);
+                if (nextConfig) {
+                    // Precargar tiles del próximo capítulo
+                    map.once('moveend', () => {
+                        setTimeout(() => {
+                            updatePortData(nextChapter);
+                        }, 1000);
+                    });
+                }
+            }
+        }
+
+        // Optimización de rendimiento
+        let isAnimating = false;
+        map?.on('movestart', () => {
+            isAnimating = true;
+        });
+
+        map?.on('moveend', () => {
+            isAnimating = false;
+            preloadNextChapter();
+        });
+    </script>
+</body>
+</html>
