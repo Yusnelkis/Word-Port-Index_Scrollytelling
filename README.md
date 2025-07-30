@@ -6,7 +6,6 @@ This interactive project visualizes 3,824 ports from the World Port Index datase
 
 - Satellite map with 3,800+ ports worldwide
 - Popups with port facilities: container, oil, LNG
-- Interactive size filter (Very Small to Large)
 - Scrollytelling chapters:
   - Global distribution
   - Regional clusters
@@ -22,5 +21,12 @@ This interactive project visualizes 3,824 ports from the World Port Index datase
 - HTML + CSS (no frameworks)
 - World Port Index CSV data
 
-## 📂 File structure
+## 📊 Data source
+
+- **World Port Index** from NGA (National Geospatial-Intelligence Agency):  
+  https://msi.nga.mil/Publications/WPI
+
+## 👩‍💻 Author
+
+**Yusnelkis Milanés Guisado**  
 
